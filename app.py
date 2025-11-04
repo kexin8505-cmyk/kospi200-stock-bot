@@ -29,7 +29,6 @@ rows = []
 st.sidebar.header("📊 점수 기준 (단순 예시)")
 st.sidebar.write("- 1일 수익률이 양수이면 +3점")
 st.sidebar.write("- 5일 이동평균이 20일 이동평균보다 높으면 +4점")
-
 for name, code in TICKERS.items():
     try:
         hist = yf.download(code, start=start, end=end)
@@ -39,12 +38,19 @@ for name, code in TICKERS.items():
     if hist.empty or len(hist) < 2:
         continue
 
-    current_price = hist["Close"].iloc[-1]
-    prev_price = hist["Close"].iloc[-2]
-    change_pct = (current_price - prev_price) / prev_price * 100 if prev_price != 0 else 0
+    close = hist["Close"]
 
-    ma5 = hist["Close"].tail(5).mean()
-    ma20 = hist["Close"].tail(20).mean() if len(hist) >= 20 else hist["Close"].mean()
+    # 强制变成普通浮点数，避免 pandas 的 ValueError
+    current_price = float(close.iloc[-1])
+    prev_price = float(close.iloc[-2])
+
+    if prev_price != 0:
+        change_pct = (current_price - prev_price) / prev_price * 100
+    else:
+        change_pct = 0.0
+
+    ma5 = float(close.tail(5).mean())
+    ma20 = float(close.tail(20).mean()) if len(close) >= 20 else float(close.mean())
 
     # 简单打分逻辑
     score = 0
@@ -56,10 +62,10 @@ for name, code in TICKERS.items():
     rows.append({
         "종목명": name,
         "티커": code,
-        "현재가": round(float(current_price), 2),
-        "1일 수익률(%)": round(float(change_pct), 2),
-        "5일 이동평균": round(float(ma5), 2),
-        "20일 이동평균": round(float(ma20), 2),
+        "현재가": round(current_price, 2),
+        "1일 수익률(%)": round(change_pct, 2),
+        "5일 이동평균": round(ma5, 2),
+        "20일 이동평균": round(ma20, 2),
         "추천 점수": score,
     })
 
